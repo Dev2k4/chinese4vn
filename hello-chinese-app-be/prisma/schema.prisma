@@ -1,0 +1,837 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== ENUMS =====================
+
+enum UserRole {
+  user
+  admin
+  moderator
+}
+
+enum AuthProvider {
+  google
+  facebook
+  apple
+}
+
+enum LessonType {
+  normal
+  boss
+  review
+  mock_test
+}
+
+enum StepType {
+  dialogue
+  explanation
+  new_words
+  grammar_intro
+  listening_choice
+  listening_fill
+  reading
+  meaning_select
+  hanzi_select
+  arrange_sentence
+  pinyin_input
+  flashcard
+  speaking
+  writing
+  review
+  vocab_match
+  grammar_practice
+}
+
+enum QuestionType {
+  flashcard
+  multiple_choice
+  listening_choice
+  listening_fill
+  reading
+  arrange_sentence
+  pinyin_input
+  meaning_select
+  hanzi_select
+  speaking
+  writing
+  matching
+  true_false
+  fill_blank
+}
+
+enum XpSource {
+  lesson_complete
+  step_complete
+  review
+  achievement
+  streak_bonus
+  daily_bonus
+  mock_test
+}
+
+enum SrsType {
+  vocab
+  grammar
+  sentence
+}
+
+enum SrsStage {
+  new
+  learning
+  review
+  relearning
+  mastered
+}
+
+enum ReviewSource {
+  review_session
+  lesson
+  quick_review
+}
+
+enum EnrollmentStatus {
+  active
+  completed
+  paused
+}
+
+enum MockTestSectionType {
+  listening
+  reading
+  writing
+}
+
+enum Track {
+  new
+  exp
+  review
+}
+
+// ===================== AUTH & USER =====================
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String?   @unique
+  username            String    @unique
+  displayName         String
+  password            String?
+  avatar              String?
+  nativeLanguage      String    @default("vi")
+  targetLanguage      String    @default("zh")
+  timezone            String    @default("Asia/Ho_Chi_Minh")
+  role                UserRole  @default(user)
+  isActive            Boolean   @default(true)
+  isEmailVerified     Boolean   @default(false)
+  onboardingCompleted Boolean   @default(false)
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  socialAccounts    SocialAccount[]
+  refreshTokens     RefreshToken[]
+  enrollments        UserEnrollment[]
+  lessonAttempts     LessonAttempt[]
+  stepAttempts       StepAttempt[]
+  questionAttempts   QuestionAttempt[]
+  mockTestAttempts   MockTestAttempt[]
+  xpLogs             UserXpLog[]
+  dailyActivities    DailyActivity[]
+  streak             UserStreak?
+  srsItems           SrsItem[]
+  srsReviewLogs      SrsReviewLog[]
+  userAchievements   UserAchievement[]
+  bookmarks          UserBookmark[]
+  notes              UserNote[]
+  userDecks          UserDeck[]
+  friendshipsRequested Friendship[]   @relation("FriendshipRequester")
+  friendshipsReceived  Friendship[]   @relation("FriendshipAddressee")
+  handwritingPractices HandwritingPractice[]
+  speechAttempts       SpeechAttempt[]
+  leaderboardEntries   LeaderboardEntry[]
+  challengesChallenged Challenge[]     @relation("ChallengeChallenger")
+  challengesOpponent   Challenge[]     @relation("ChallengeOpponent")
+}
+
+model SocialAccount {
+  id             String       @id @default(cuid())
+  userId         String
+  provider       AuthProvider
+  providerId     String
+  providerEmail  String?
+  createdAt      DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ===================== CONTENT =====================
+
+model CourseFramework {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  nameEn      String?
+  description String?
+  language    String   @default("zh")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  levels CourseLevel[]
+}
+
+model CourseLevel {
+  id                String  @id @default(cuid())
+  frameworkId       String
+  level             Int           // HSK 3.0 level 1-9
+  name              String        // "HSK 1", "HSK 2", ...
+  nameEn            String?
+  description       String?
+  descriptionEn     String?
+  order             Int
+  totalWords        Int     @default(0)
+  totalCharacters   Int     @default(0)
+  totalGrammar      Int     @default(0)
+  totalLessons      Int     @default(0)
+  unlockRequirement Json?
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  framework   CourseFramework @relation(fields: [frameworkId], references: [id])
+  units       Unit[]
+  enrollments UserEnrollment[]
+  vocabularies Vocabulary[]
+  grammarPoints GrammarPoint[]
+  paths       LearningPath[]     // learning paths at this level
+  mockTests   MockTest[]
+
+  @@unique([frameworkId, level])
+}
+
+// ===================== LEARNING PATHS =====================
+
+model LearningPath {
+  id          String   @id @default(cuid())
+  code        String   @unique    // "new-1", "exp-3", "review-5"
+  track       Track               // new / exp / review
+  levelId     String              // CourseLevel this path belongs to
+  name        Json?    // {"vi": "Lộ trình mới HSK 1", "en": "New Path HSK 1"}
+  description Json?    // {"vi": "Dành cho người mới...", "en": "For beginners..."}
+  order       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  level       CourseLevel      @relation(fields: [levelId], references: [id])
+  units       LearningPathUnit[]
+  enrollments UserEnrollment[]
+}
+
+model LearningPathUnit {
+  id     String @id @default(cuid())
+  pathId String
+  name   Json?  // {"vi": "Tuần 1", "en": "Week 1"}
+  order  Int
+
+  path    LearningPath        @relation(fields: [pathId], references: [id])
+  lessons LearningPathLesson[]
+}
+
+model LearningPathLesson {
+  id         String  @id @default(cuid())
+  unitId     String
+  lessonId   String
+  order      Int
+  isRequired Boolean @default(true)
+
+  unit   LearningPathUnit @relation(fields: [unitId], references: [id])
+  lesson Lesson           @relation(fields: [lessonId], references: [id])
+
+  @@unique([unitId, lessonId])
+}
+
+// ===================== CONTENT STRUCTURE =====================
+
+model Unit {
+  id          String   @id @default(cuid())
+  levelId     String
+  title       Json?    // {"vi": "Bài 1: Xin chào", "en": "Lesson 1: Hello"}
+  description String?
+  order       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  level   CourseLevel @relation(fields: [levelId], references: [id])
+  lessons Lesson[]
+}
+
+model Lesson {
+  id               String     @id @default(cuid())
+  unitId           String
+  title            Json?    // {"vi": "Từ vựng chào hỏi", "en": "Greeting vocabulary"}
+  description      String?
+  order            Int
+  type             LessonType @default(normal)
+  estimatedMinutes Int        @default(5)
+  xpReward         Int        @default(10)
+  prerequisiteIds  Json?      // ["lessonId1", "lessonId2"]
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  unit          Unit             @relation(fields: [unitId], references: [id])
+  steps         LessonStep[]
+  vocabItems    LessonVocab[]
+  grammarItems  LessonGrammar[]
+  attempts      LessonAttempt[]
+  stepAttempts  StepAttempt[]
+  pathLessons   LearningPathLesson[]
+}
+
+model LessonStep {
+  id         String   @id @default(cuid())
+  lessonId   String
+  order      Int
+  type       StepType
+  content    Json     // chứa questionId, vocabIds, dialogueLines... tuỳ type
+  xpReward   Int      @default(5)
+  isOptional Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  lesson       Lesson        @relation(fields: [lessonId], references: [id])
+  stepAttempts StepAttempt[]
+}
+
+// ===================== VOCABULARY =====================
+
+model Vocabulary {
+  id              String   @id @default(cuid())
+  levelId         String?
+  hanzi           String
+  pinyin          String          // tone marks: nǐ hǎo
+  pinyinTone      String?         // tone numbers: ni3 hao3
+  translations    Json?           // {"vi": "số không", "en": "zero", "es": "cero", "fr": "zéro"}
+  wordClass       Json?           // {"vi": "danh từ", "en": "noun"}
+  difficulty      Int      @default(1)
+  frequencyRank   Int?
+  audioUrl        String?
+  imageUrl        String?
+  strokeSvg       String?
+  strokeData      Json?
+  characters      Json?    // [{characterId, position, pinyin}]
+  radical         String?
+  radicalMeaning  String?
+  decomposition   String?
+  notes           Json?           // {"vi": "ghi chú", "en": "notes"}
+  isActive        Boolean  @default(true)
+  order           Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  level           CourseLevel?   @relation(fields: [levelId], references: [id])
+  examples        VocabularyExample[]
+  lessonItems     LessonVocab[]
+  srsItems        SrsItem[]
+  questions       Question[]     @relation("QuestionVocabulary")
+  speechAttempts  SpeechAttempt[]
+  deckItems       UserDeckItem[] @relation("DeckItemVocabulary")
+  bookmarks       UserBookmark[] @relation("BookmarkVocabulary")
+  userNotes       UserNote[]     @relation("NoteVocabulary")
+
+  @@unique([hanzi, pinyin])
+}
+
+model VocabularyExample {
+  id           String @id @default(cuid())
+  vocabularyId String
+  hanzi        String
+  pinyin       String
+  translations Json?    // {"vi": "Một người", "en": "One person"}
+  audioUrl     String?
+  order        Int
+
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id])
+}
+
+model LessonVocab {
+  id       String @id @default(cuid())
+  lessonId String
+  vocabId  String
+  order    Int
+  isNew    Boolean @default(true)
+
+  lesson Lesson     @relation(fields: [lessonId], references: [id])
+  vocab  Vocabulary @relation(fields: [vocabId], references: [id])
+
+  @@unique([lessonId, vocabId])
+}
+
+// ===================== GRAMMAR =====================
+
+model GrammarPoint {
+  id          String   @id @default(cuid())
+  levelId     String?
+  title       Json?    // {"vi": "Câu chào 你好", "en": "Greeting 你好"}
+  explanation Json?    // {"vi": "Giải thích...", "en": "Explanation..."}
+  structure   Json?    // {"vi": "Chủ ngữ + 好", "en": "Subject + 好"}
+  difficulty   Int      @default(1)
+  examples     Json?    // [{hanzi, pinyin, translations: {vi: "Xin chào", en: "Hello"}, audioUrl}]
+  order        Int?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  level       CourseLevel?  @relation(fields: [levelId], references: [id])
+  lessonItems LessonGrammar[]
+  srsItems    SrsItem[]     @relation("SrsGrammar")
+  questions   Question[]    @relation("QuestionGrammar")
+  deckItems   UserDeckItem[]
+  bookmarks   UserBookmark[] @relation("BookmarkGrammar")
+  notes       UserNote[]     @relation("NoteGrammar")
+}
+
+model LessonGrammar {
+  id        String @id @default(cuid())
+  lessonId  String
+  grammarId String
+  order     Int
+
+  lesson  Lesson       @relation(fields: [lessonId], references: [id])
+  grammar GrammarPoint @relation(fields: [grammarId], references: [id])
+
+  @@unique([lessonId, grammarId])
+}
+
+// ===================== QUESTION & MOCK TEST =====================
+
+model Question {
+  id             String       @id @default(cuid())
+  type           QuestionType
+  prompt         Json?        // {"vi": "Chọn đáp án đúng", "en": "Choose the correct answer"}
+  subPrompt      Json?        // {"vi": "Gợi ý...", "en": "Hint..."}
+  pinyin         String?
+  audioUrl       String?
+  imageUrl       String?
+  options        Json?
+  correctAnswer  Json
+  explanation    Json?        // {"vi": "Giải thích...", "en": "Explanation..."}
+  difficulty     Int      @default(1)
+  timeLimit      Int?
+  vocabularyId   String?
+  grammarPointId String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  vocabulary   Vocabulary?       @relation("QuestionVocabulary", fields: [vocabularyId], references: [id])
+  grammarPoint GrammarPoint?     @relation("QuestionGrammar", fields: [grammarPointId], references: [id])
+  attempts     QuestionAttempt[]
+}
+
+model MockTest {
+  id           String   @id @default(cuid())
+  levelId      String
+  title        Json?    // {"vi": "Bài thi số 1", "en": "Mock Test 1"}
+  description  Json?    // {"vi": "Mô tả...", "en": "Description..."}
+  timeLimit    Int      @default(60)
+  passingScore Int      @default(60)
+  sections     Json?    // [{title: {vi: "Nghe", en: "Listening"}, type, questionIds: ["q1","q2"]}]
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  level    CourseLevel       @relation(fields: [levelId], references: [id])
+  attempts MockTestAttempt[]
+}
+
+// ===================== PROGRESS =====================
+
+model UserEnrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  levelId     String
+  pathId      String?          // optional — enrollment in a specific learning path
+  status      EnrollmentStatus @default(active)
+  startedAt   DateTime         @default(now())
+  completedAt DateTime?
+  xpEarned    Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user  User         @relation(fields: [userId], references: [id])
+  level CourseLevel  @relation(fields: [levelId], references: [id])
+  path  LearningPath? @relation(fields: [pathId], references: [id])
+
+  @@unique([userId, levelId])
+}
+
+model LessonAttempt {
+  id               String    @id @default(cuid())
+  userId           String
+  lessonId         String
+  score            Int       @default(0)
+  totalSteps       Int       @default(0)
+  completedSteps   Int       @default(0)
+  xpEarned         Int       @default(0)
+  timeSpentSeconds Int       @default(0)
+  isPassed         Boolean   @default(false)
+  isCompleted      Boolean   @default(false)
+  attemptNumber    Int       @default(1)
+  mistakes         Json?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId, attemptNumber])
+}
+
+model StepAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  lessonId         String
+  stepId           String
+  isCorrect        Boolean?
+  timeSpentSeconds Int      @default(0)
+  attemptsCount    Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  user   User       @relation(fields: [userId], references: [id])
+  lesson Lesson     @relation(fields: [lessonId], references: [id])
+  step   LessonStep @relation(fields: [stepId], references: [id])
+}
+
+model QuestionAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  questionId       String
+  lessonId         String?
+  mockTestId       String?
+  userAnswer       Json
+  isCorrect        Boolean
+  timeSpentSeconds Int      @default(0)
+  attemptNumber    Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+model MockTestAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  mockTestId       String
+  score            Int      @default(0)
+  totalQuestions   Int      @default(0)
+  correctAnswers   Int      @default(0)
+  timeSpentSeconds Int      @default(0)
+  sections         Json?
+  isPassed         Boolean  @default(false)
+  completedAt      DateTime?
+  createdAt        DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  mockTest MockTest @relation(fields: [mockTestId], references: [id])
+}
+
+model UserXpLog {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int
+  source      XpSource
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DailyActivity {
+  id                      String   @id @default(cuid())
+  userId                  String
+  date                    DateTime @db.Date
+  totalXp                 Int      @default(0)
+  totalLessonsCompleted   Int      @default(0)
+  totalStepsCompleted     Int      @default(0)
+  totalReviewsDone        Int      @default(0)
+  totalTimeSpentSeconds   Int      @default(0)
+  wordsLearned            Int      @default(0)
+  streakCount             Int      @default(0)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model UserStreak {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate DateTime @db.Date
+  freezeCount    Int      @default(0)
+  maxFreeze      Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ===================== SRS =====================
+
+model SrsItem {
+  id              String   @id @default(cuid())
+  userId          String
+  vocabularyId    String?
+  grammarPointId  String?
+  srsType         SrsType
+  stage           SrsStage @default(new)
+  interval        Int      @default(0)
+  easeFactor      Float    @default(2.5)
+  repetitions     Int      @default(0)
+  lastQuality     Int      @default(0)
+  nextReviewAt    DateTime @default(now())
+  totalReviews    Int      @default(0)
+  correctReviews  Int      @default(0)
+  lapsedCount     Int      @default(0)
+  avgResponseTime Float?
+  lastReviewedAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id])
+  vocabulary Vocabulary?       @relation(fields: [vocabularyId], references: [id])
+  grammar    GrammarPoint?     @relation("SrsGrammar", fields: [grammarPointId], references: [id])
+  reviewLogs SrsReviewLog[]
+}
+
+model SrsReviewLog {
+  id                  String       @id @default(cuid())
+  userId              String
+  srsItemId           String
+  quality             Int
+  timeSpentSeconds    Int          @default(0)
+  previousInterval    Int          @default(0)
+  previousEaseFactor  Float        @default(2.5)
+  previousRepetitions Int          @default(0)
+  isCorrect           Boolean
+  source              ReviewSource @default(review_session)
+  createdAt           DateTime     @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  srsItem SrsItem @relation(fields: [srsItemId], references: [id])
+}
+
+// ===================== HANDWRITING & SPEECH =====================
+
+model Character {
+  id            String  @id @default(cuid())
+  hanzi         String  @unique
+  pinyin        String
+  meaning       String
+  radical       String?
+  strokeCount   Int?
+  strokeOrder   String?
+  strokeSvg     String?
+  decomposition String?
+  frequencyRank Int?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  handwritingPractices HandwritingPractice[]
+  bookmarks            UserBookmark[]       @relation("BookmarkCharacter")
+}
+
+model HandwritingPractice {
+  id               String   @id @default(cuid())
+  userId           String
+  characterId      String
+  strokesData      Json
+  accuracy         Float    @default(0)
+  timeSpentSeconds Int      @default(0)
+  score            Int?
+  createdAt        DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  character Character @relation(fields: [characterId], references: [id])
+}
+
+model SpeechAttempt {
+  id           String   @id @default(cuid())
+  userId       String
+  vocabularyId String?
+  questionId   String?
+  audioUrl     String
+  score        Float?
+  phonemeScores Json?
+  duration     Float
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  vocabulary Vocabulary? @relation(fields: [vocabularyId], references: [id])
+}
+
+// ===================== USER DECKS =====================
+
+model UserDeck {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id])
+  items UserDeckItem[]
+}
+
+model UserDeckItem {
+  id             String   @id @default(cuid())
+  deckId         String
+  vocabularyId   String?
+  grammarPointId String?
+  customHanzi    String?
+  customPinyin   String?
+  customMeaning  String?
+  notes          String?
+  order          Int
+  createdAt      DateTime @default(now())
+
+  deck       UserDeck      @relation(fields: [deckId], references: [id])
+  vocabulary Vocabulary?   @relation("DeckItemVocabulary", fields: [vocabularyId], references: [id])
+  grammar    GrammarPoint? @relation(fields: [grammarPointId], references: [id])
+}
+
+// ===================== SOCIAL =====================
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id])
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+}
+
+model LeaderboardEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timeframe String
+  xpTotal   Int      @default(0)
+  rank      Int      @default(0)
+  weekStart DateTime? @db.Date
+  monthStart DateTime? @db.Date
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Challenge {
+  id               String    @id @default(cuid())
+  challengerId     String
+  opponentId       String
+  lessonId         String
+  scoreChallenger  Int?
+  scoreOpponent    Int?
+  status           String    @default("pending")
+  startedAt        DateTime?
+  completedAt      DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+
+  challenger User @relation("ChallengeChallenger", fields: [challengerId], references: [id])
+  opponent   User @relation("ChallengeOpponent", fields: [opponentId], references: [id])
+}
+
+// ===================== GAMIFICATION =====================
+
+model Achievement {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  nameEn        String?
+  description   String
+  descriptionEn String?
+  iconUrl       String?
+  xpReward      Int      @default(0)
+  category      String
+  criteria      Json
+  isHidden      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id             String    @id @default(cuid())
+  userId         String
+  achievementId  String
+  progress       Json?
+  isCompleted    Boolean   @default(false)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+}
+
+// ===================== BOOKMARKS & NOTES =====================
+
+model UserBookmark {
+  id             String   @id @default(cuid())
+  userId         String
+  vocabularyId   String?
+  grammarPointId String?
+  lessonId       String?
+  characterId    String?
+  createdAt      DateTime @default(now())
+
+  user       User         @relation(fields: [userId], references: [id])
+  vocabulary Vocabulary?  @relation("BookmarkVocabulary", fields: [vocabularyId], references: [id])
+  grammar    GrammarPoint? @relation("BookmarkGrammar", fields: [grammarPointId], references: [id])
+  character  Character?   @relation("BookmarkCharacter", fields: [characterId], references: [id])
+}
+
+model UserNote {
+  id             String   @id @default(cuid())
+  userId         String
+  vocabularyId   String?
+  grammarPointId String?
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user       User         @relation(fields: [userId], references: [id])
+  vocabulary Vocabulary?  @relation("NoteVocabulary", fields: [vocabularyId], references: [id])
+  grammar    GrammarPoint? @relation("NoteGrammar", fields: [grammarPointId], references: [id])
+}
