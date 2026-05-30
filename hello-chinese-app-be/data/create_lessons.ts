@@ -9,6 +9,38 @@ const viEn = (viStr: string, enStr: string) => ({ vi: viStr, en: enStr });
 
 // Theme names per level
 const THEMES: Record<number, { vi: string; en: string }[]> = {
+  1: [
+    { vi: 'Chào hỏi & Giới thiệu', en: 'Greetings & Introductions' },
+    { vi: 'Số đếm & Thời gian', en: 'Numbers & Time' },
+    { vi: 'Gia đình & Bạn bè', en: 'Family & Friends' },
+    { vi: 'Đồ ăn & Mua sắm', en: 'Food & Shopping' },
+    { vi: 'Sinh hoạt hàng ngày', en: 'Daily Life' },
+    { vi: 'Màu sắc & Tính từ', en: 'Colors & Adjectives' },
+  ],
+  2: [
+    { vi: 'Cuộc sống hàng ngày', en: 'Daily Routine' },
+    { vi: 'Trường học & Lớp học', en: 'School & Classroom' },
+    { vi: 'Du lịch & Phương tiện', en: 'Travel & Transportation' },
+    { vi: 'Thời tiết & Mùa', en: 'Weather & Seasons' },
+    { vi: 'Sở thích & Giải trí', en: 'Hobbies & Entertainment' },
+    { vi: 'Sức khỏe & Cơ thể', en: 'Health & Body' },
+  ],
+  3: [
+    { vi: 'Công việc & Nghề nghiệp', en: 'Work & Careers' },
+    { vi: 'Giao thông & Du lịch', en: 'Transportation & Travel' },
+    { vi: 'Mua sắm & Dịch vụ', en: 'Shopping & Services' },
+    { vi: 'Quan hệ xã hội', en: 'Social Relationships' },
+    { vi: 'Giáo dục & Học tập', en: 'Education & Learning' },
+    { vi: 'Văn hóa & Phong tục', en: 'Culture & Customs' },
+  ],
+  4: [
+    { vi: 'Kinh doanh & Tài chính', en: 'Business & Finance' },
+    { vi: 'Môi trường & Xã hội', en: 'Environment & Society' },
+    { vi: 'Khoa học & Công nghệ', en: 'Science & Technology' },
+    { vi: 'Nghệ thuật & Văn học', en: 'Arts & Literature' },
+    { vi: 'Sức khỏe & Y tế', en: 'Health & Medicine' },
+    { vi: 'Luật pháp & Chính trị', en: 'Law & Politics' },
+  ],
   5: [
     { vi: 'Công việc văn phòng', en: 'Office Work' },
     { vi: 'Giáo dục & Học tập', en: 'Education & Study' },
@@ -266,9 +298,9 @@ async function createLevelLessons(levelNum: number) {
 }
 
 async function main() {
-  console.log('=== Create Lessons for HSK 5-7 ===\n');
+  console.log('=== Create Lessons for HSK 1-7 ===\n');
 
-  for (const level of [5, 6, 7]) {
+  for (const level of [1, 2, 3, 4, 5, 6, 7]) {
     await createLevelLessons(level);
   }
 

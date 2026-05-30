@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { MediaService } from "./media.service";
 import { Public } from "../auth/public.decorator";
 
@@ -8,7 +8,13 @@ export class MediaController {
 
   @Public()
   @Post("presign")
-  presign(@Body() body: { path: string; contentType: string }) {
+  async presign(@Body() body: { path: string; contentType: string }) {
     return this.mediaService.presign(body.path, body.contentType);
+  }
+
+  @Public()
+  @Get("url/:path")
+  async getUrl(@Param("path") path: string) {
+    return this.mediaService.getFileUrl(path);
   }
 }

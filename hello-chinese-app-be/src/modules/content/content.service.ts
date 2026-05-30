@@ -169,6 +169,10 @@ export class ContentService {
       const content = step.content as any;
       if (content?.questionId) {
         questionIds.push(content.questionId);
+      } else if (content?.questionIds && Array.isArray(content.questionIds)) {
+        for (const qid of content.questionIds) {
+          if (qid) questionIds.push(qid);
+        }
       }
     }
 

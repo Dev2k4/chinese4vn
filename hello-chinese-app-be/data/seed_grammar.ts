@@ -33,7 +33,15 @@ async function main() {
   const levelMap = new Map<number, string>();
   for (const l of allLevels) levelMap.set(l.level, l.id);
 
-  console.log('\nUpserting grammar points...');
+  const existingCount = await prisma.grammarPoint.count({ where: { levelId: { in: allLevels.map(l => l.id) } } });
+  if (existingCount > 0) {
+    console.log(`\nCleaning ${existingCount} existing grammar points...`);
+    await prisma.lessonGrammar.deleteMany({ where: { grammar: { levelId: { in: allLevels.map(l => l.id) } } } });
+    await prisma.grammarPoint.deleteMany({ where: { levelId: { in: allLevels.map(l => l.id) } } });
+    console.log('  Done');
+  }
+
+  console.log('\nCreating grammar points...');
   let created = 0;
 
   for (let i = 0; i < entries.length; i++) {

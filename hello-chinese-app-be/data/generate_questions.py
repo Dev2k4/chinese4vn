@@ -69,7 +69,7 @@ def generate_meaning_question(entry, pool, qid):
         'prompt': {'vi': f'Chọn nghĩa đúng của từ "{hanzi}"', 'en': f'Choose the correct meaning of "{hanzi}"'},
         'pinyin': pinyin,
         'options': options,
-        'correctAnswer': json.dumps(correct_vi),
+        'correctAnswer': correct_vi,
         'difficulty': entry.get('level', 1),
         'vocabularyHanzi': hanzi,
     }
@@ -104,7 +104,7 @@ def generate_hanzi_question(entry, pool, qid):
         'type': 'hanzi_select',
         'prompt': {'vi': f'Chọn hanzi đúng cho "{correct_vi}"', 'en': f'Choose the correct hanzi for "{correct_vi}"'},
         'options': options,
-        'correctAnswer': json.dumps(hanzi),
+        'correctAnswer': hanzi,
         'difficulty': entry.get('level', 1),
         'vocabularyHanzi': hanzi,
     }
@@ -140,7 +140,7 @@ def generate_pinyin_question(entry, pool, qid):
         'prompt': {'vi': f'Chọn pinyin đúng của từ "{hanzi}"', 'en': f'Choose the correct pinyin for "{hanzi}"'},
         'pinyin': pinyin,
         'options': options,
-        'correctAnswer': json.dumps(pinyin),
+        'correctAnswer': pinyin,
         'difficulty': entry.get('level', 1),
         'vocabularyHanzi': hanzi,
     }
