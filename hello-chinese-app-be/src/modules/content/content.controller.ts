@@ -19,18 +19,6 @@ export class ContentController {
   }
 
   @Public()
-  @Get("mock-tests/:levelId")
-  getMockTest(@Param("levelId") levelId: string) {
-    return this.contentService.getMockTest(levelId);
-  }
-
-  @Public()
-  @Get("placement-test")
-  getPlacementTest() {
-    return this.contentService.getPlacementTest();
-  }
-
-  @Public()
   @Get("paths")
   getPaths() {
     return this.contentService.getPaths();

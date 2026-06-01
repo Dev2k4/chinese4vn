@@ -7,7 +7,6 @@ import { HealthModule } from "./modules/health/health.module";
 import { UsersModule } from "./modules/users/users.module";
 import { ProgressModule } from "./modules/progress/progress.module";
 import { ReviewsModule } from "./modules/reviews/reviews.module";
-import { MediaModule } from "./modules/media/media.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard";
 
@@ -21,7 +20,6 @@ import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard";
     UsersModule,
     ProgressModule,
     ReviewsModule,
-    MediaModule,
   ],
   providers: [
     {

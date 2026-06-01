@@ -17,7 +17,12 @@
     "seed:lessons": "ts-node data/create_lessons.ts",
     "seed:mocktests": "ts-node data/seed_mocktests.ts",
     "seed:characters": "ts-node data/seed_characters.ts",
-    "seed:all": "ts-node data/seed_all.ts"
+    "seed:all": "ts-node data/seed_all.ts",
+    "examples:generate": "python3 data/generate_examples.py",
+    "examples:pinyin": "python3 data/generate_pinyin.py",
+    "examples:audio": "python3 data/generate_example_audio.py",
+    "examples:seed": "ts-node data/seed_examples.ts",
+    "examples:pipeline": "python3 data/generate_examples.py && python3 data/generate_pinyin.py && python3 data/generate_example_audio.py && ts-node data/seed_examples.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

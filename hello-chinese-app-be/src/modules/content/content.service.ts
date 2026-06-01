@@ -222,62 +222,6 @@ export class ContentService {
     };
   }
 
-  async getMockTest(levelId: string) {
-    const level = await this.prisma.courseLevel.findUnique({
-      where: { id: levelId },
-    });
-
-    if (!level) {
-      throw new NotFoundException("Level not found");
-    }
-
-    const mockTest = await this.prisma.mockTest.findFirst({
-      where: { levelId, isActive: true },
-    });
-
-    if (!mockTest) {
-      return {
-        id: `mock-${level.level}`,
-        hskLevel: level.level,
-        title: `HSK ${level.level} Mock Test`,
-        translations: null,
-        sections: [],
-        duration: 0,
-        totalQuestions: 0,
-      };
-    }
-
-    const sections = (mockTest.sections as any[]) || [];
-    const allQuestionIds = sections.flatMap((s: any) => s.questionIds || []);
-    const questions = await this.prisma.question.findMany({
-      where: { id: { in: allQuestionIds } },
-    });
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
-
-    return {
-      id: mockTest.id,
-      hskLevel: level.level,
-      title: vi(mockTest.title),
-      description: vi(mockTest.description),
-      translations: {
-        title: mockTest.title,
-        description: mockTest.description,
-      },
-      duration: mockTest.timeLimit,
-      totalQuestions: allQuestionIds.length,
-      passingScore: mockTest.passingScore,
-      sections: sections.map((section: any) => ({
-        id: section.id,
-        title: typeof section.title === 'object' ? vi(section.title) : section.title,
-        type: section.type,
-        questions: (section.questionIds || []).map((qid: string) => {
-          const q = questionMap.get(qid);
-          return q ? mapQuestion(q) : null;
-        }).filter(Boolean),
-      })),
-    };
-  }
-
   async getPaths() {
     const paths = await this.prisma.learningPath.findMany({
       where: { isActive: true },
@@ -371,16 +315,6 @@ export class ContentService {
         })),
       })),
     };
-  }
-
-  async getPlacementTest() {
-    const questions = await this.prisma.question.findMany({
-      where: { vocabularyId: { not: null } },
-      take: 48,
-      orderBy: { difficulty: "asc" },
-    });
-
-    return { questions: questions.map(mapQuestion) };
   }
 
   async getVocabularyByLevel(levelId: string, page = 1, limit = 50) {

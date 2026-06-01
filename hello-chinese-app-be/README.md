@@ -37,3 +37,31 @@ Server will start at `http://localhost:4000`.
 ## API docs
 
 See [API.md](API.md).
+
+---
+
+## Example Sentences Pipeline
+
+Generate 3 example sentences per vocabulary word with pinyin, Vietnamese translation, and audio:
+
+```bash
+# Step 1: Generate Chinese sentences + Vietnamese translations via LLM
+npm run examples:generate
+
+# Step 2: Generate pinyin for all sentences
+npm run examples:pinyin
+
+# Step 3: Generate TTS audio files
+npm run examples:audio
+
+# Step 4: Upload audio to MinIO + seed database
+npm run examples:seed
+
+# Or run all at once:
+npm run examples:pipeline
+```
+
+**Environment variables** (add to `.env`):
+- `ROUTER_API_KEY` — 9Router API key
+- `ROUTER_API_BASE` — API endpoint (default: `https://9router.rehub.page/v1`)
+- `EXAMPLES_MODEL` — Model name (default: `gemini/gemini-2.0-flash`)
